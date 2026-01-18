@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+"""
+Modèles de données pour le site de notation musicale
+"""
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 

@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+"""
+Application Flask principale pour le site de notation musicale
+"""
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from database import Database
 from spotify_api import SpotifyAPI
@@ -16,10 +19,11 @@ UPLOAD_FOLDER = 'static/uploads/profiles'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
-
+# Créer le dossier uploads
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
+    """Vérifie si l'extension du fichier est autorisée"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -28,22 +32,24 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 SPOTIFY_CLIENT_ID = '1d12cda46ed94410b210fa95ff0c1d6d'
 SPOTIFY_CLIENT_SECRET = '0bdf1645b4704190b29c9403b5573064'
 
-
+# Initialisation
 db = Database()
 
 
-
+# Initialiser Spotify uniquement si les identifiants sont configurés
 try:
+    # Vérifier que les identifiants ne sont pas vides
     if SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET:
         spotify = SpotifyAPI(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
-        print("✅ Spotify API configurée !")
+        print("✅ Spotify API configurée avec succès!")
     else:
         spotify = None
-        print("⚠️  Spotify API non configurée.")
+        print("⚠️  Spotify API non configurée. Ajoutez vos identifiants dans app.py")
 except Exception as e:
     spotify = None
-    print(f"⚠️  Erreur dans la base Spotify: {e}")
+    print(f"⚠️  Erreur lors de l'initialisation de Spotify: {e}")
 
+# Décorateur pour les routes protégées
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -66,7 +72,8 @@ def import_artist_albums(artist_id, spotify_artist_id):
     """
     if not spotify:
         return 0
-
+    
+    # Récupérer les albums de l'artiste depuis Spotify
     artist_albums = spotify.get_artist_albums(spotify_artist_id)
     
     if not artist_albums:
@@ -75,11 +82,11 @@ def import_artist_albums(artist_id, spotify_artist_id):
     albums_added = 0
     
     for album_data in artist_albums:
-   
+        # Vérifier si l'album existe déjà
         existing_album = db.get_album_by_spotify_id(album_data['id'])
         
         if not existing_album:
-
+            # Créer l'album
             album_id = db.create_album(
                 album_data['name'],
                 artist_id,
@@ -102,7 +109,7 @@ def index():
     top_albums = db.get_top_rated_albums(limit=12)
     worst_albums = db.get_worst_rated_albums(limit=8)
     
-
+    # Enrichir avec les informations des artistes
     for item in top_albums:
         artist = db.get_artist_by_id(item['album'].artist_id)
         item['artist'] = artist
@@ -111,11 +118,36 @@ def index():
         artist = db.get_artist_by_id(item['album'].artist_id)
         item['artist'] = artist
     
-
+    # Recommandations personnalisées si l'utilisateur est connecté
+    recommended_albums = []
+    has_ratings = False
+    if 'user_id' in session:
+        # Vérifier si l'utilisateur a des notes > 6.5
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) as count FROM ratings WHERE user_id = ? AND score > 6.5', 
+                      (session['user_id'],))
+        count = cursor.fetchone()['count']
+        conn.close()
+        
+        has_ratings = count > 0
+        
+        print(f"[DEBUG ROUTE] User {session['user_id']} a {count} notes > 6.5")
+        print(f"[DEBUG ROUTE] has_ratings = {has_ratings}")
+        
+        if has_ratings:
+            recommended_albums = db.get_recommended_albums(session['user_id'], limit=12)
+            print(f"[DEBUG ROUTE] Recommandations obtenues: {len(recommended_albums)}")
+            
+            for item in recommended_albums:
+                artist = db.get_artist_by_id(item['album'].artist_id)
+                item['artist'] = artist
     
     return render_template('index.html', 
                           top_albums=top_albums,
-                          worst_albums=worst_albums,)
+                          worst_albums=worst_albums,
+                          recommended_albums=recommended_albums,
+                          has_ratings=has_ratings)
 
 
 # ========== AUTHENTIFICATION ==========
@@ -129,7 +161,7 @@ def register():
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
         
-       
+        # Validation
         if not username or not email or not password:
             flash('Tous les champs sont requis', 'danger')
             return render_template('register.html')
@@ -142,7 +174,7 @@ def register():
             flash('Le mot de passe doit contenir au moins 6 caractères', 'danger')
             return render_template('register.html')
         
-   
+        # Créer l'utilisateur
         user_id = db.create_user(username, email, password)
         
         if user_id:
@@ -200,13 +232,14 @@ def search():
         'spotify_artists': []
     }
     
-
+    # Recherche dans la base de données locale
     if search_type in ['all', 'albums']:
         results['albums'] = db.search_albums(query)
     
     if search_type in ['all', 'artists']:
         results['artists'] = db.search_artists(query)
-
+    
+    # Recherche Spotify
     if spotify:
         if search_type in ['all', 'albums']:
             results['spotify_albums'] = spotify.search_albums(query, limit=10)
@@ -232,16 +265,17 @@ def album_detail(album_id):
     ratings = db.get_album_ratings(album_id)
     avg_rating = db.get_album_average_rating(album_id)
     
- 
+    # Enrichir les notes avec les infos utilisateurs ET le nombre de réponses
     for rating in ratings:
         rating.user = db.get_user_by_id(rating.user_id)
         rating.replies_count = db.get_replies_count(rating.id)
-
+    
+    # Note de l'utilisateur actuel
     user_rating = None
     if 'user_id' in session:
         user_rating = db.get_user_rating(session['user_id'], album_id)
     
-
+    # Récupérer les pistes depuis Spotify
     tracks = []
     if spotify and album.spotify_id:
         tracks = spotify.get_album_tracks(album.spotify_id)
@@ -266,6 +300,7 @@ def album_tracklist(album_id):
     
     artist = db.get_artist_by_id(album.artist_id)
     
+    # Récupérer les pistes depuis Spotify
     tracks = []
     total_duration_ms = 0
     
@@ -273,6 +308,7 @@ def album_tracklist(album_id):
         tracks = spotify.get_album_tracks(album.spotify_id)
         total_duration_ms = sum(track['duration_ms'] for track in tracks)
     
+    # Formater la durée totale
     total_minutes = total_duration_ms // 60000
     total_seconds = (total_duration_ms % 60000) // 1000
     
@@ -326,15 +362,19 @@ def rating_replies(rating_id):
         flash('Critique introuvable', 'danger')
         return redirect(url_for('index'))
     
+    # Récupérer les informations
     album = db.get_album_by_id(rating['album_id'])
     artist = db.get_artist_by_id(album.artist_id)
     rating_user = db.get_user_by_id(rating['user_id'])
     
+    # Récupérer les réponses
     replies = db.get_rating_replies(rating_id)
     
+    # Enrichir avec les infos utilisateurs
     for reply in replies:
         reply.user = db.get_user_by_id(reply.user_id)
     
+    # Convertir rating en objet Rating
     from models import Rating
     rating_obj = Rating(
         rating['id'],
@@ -397,6 +437,7 @@ def artist_detail(artist_id):
     albums = db.get_albums_by_artist(artist_id)
     tags = db.get_artist_tags(artist_id)
     
+    # Calculer la note moyenne pour chaque album
     for album in albums:
         album.avg_rating = db.get_album_average_rating(album.id)
     
@@ -439,17 +480,20 @@ def add_album_from_spotify(spotify_id):
         flash('L\'API Spotify n\'est pas configurée', 'danger')
         return redirect(url_for('search'))
     
+    # Vérifier si l'album existe déjà
     existing_album = db.get_album_by_spotify_id(spotify_id)
     if existing_album:
         flash('Cet album existe déjà dans la base de données', 'info')
         return redirect(url_for('album_detail', album_id=existing_album.id))
     
+    # Récupérer les détails depuis Spotify
     album_data = spotify.get_album_details(spotify_id)
     
     if not album_data:
         flash('Impossible de récupérer les informations de l\'album', 'danger')
         return redirect(url_for('search'))
     
+    # Créer ou récupérer l'artiste
     artist = db.get_artist_by_spotify_id(album_data['artist_id'])
     if not artist:
         artist_data = spotify.get_artist_details(album_data['artist_id'])
@@ -462,6 +506,7 @@ def add_album_from_spotify(spotify_id):
     else:
         artist_id = artist.id
     
+    # Créer l'album
     album_id = db.create_album(
         album_data['name'],
         artist_id,
@@ -471,6 +516,7 @@ def add_album_from_spotify(spotify_id):
         album_data['genres']
     )
     
+    # Importer les autres albums de l'artiste en arrière-plan
     albums_added = import_artist_albums(artist_id, album_data['artist_id'])
     
 
@@ -478,6 +524,7 @@ def add_album_from_spotify(spotify_id):
     return redirect(url_for('album_detail', album_id=album_id))
 
 
+# Remplacez la route user_profile dans app.py par celle-ci :
 
 @app.route('/profile/<int:user_id>')
 def user_profile(user_id):
@@ -488,15 +535,19 @@ def user_profile(user_id):
         flash('Utilisateur introuvable', 'danger')
         return redirect(url_for('index'))
     
+    # Récupérer les statistiques
     conn = db.get_connection()
     cursor = conn.cursor()
     
+    # Nombre de notes
     cursor.execute('SELECT COUNT(*) as count FROM ratings WHERE user_id = ?', (user_id,))
     ratings_count = cursor.fetchone()['count']
     
+    # Nombre de followers
     cursor.execute('SELECT COUNT(*) as count FROM follows WHERE following_id = ?', (user_id,))
     followers_count = cursor.fetchone()['count']
     
+    # Nombre de suivis
     cursor.execute('SELECT COUNT(*) as count FROM follows WHERE follower_id = ?', (user_id,))
     following_count = cursor.fetchone()['count']
     
@@ -506,6 +557,7 @@ def user_profile(user_id):
         'following_count': following_count
     }
     
+    # Récupérer les notes de l'utilisateur
     cursor.execute('''
         SELECT * FROM ratings 
         WHERE user_id = ? 
@@ -524,6 +576,7 @@ def user_profile(user_id):
             'artist': artist
         })
     
+    # Récupérer les 5 albums les mieux notés par l'utilisateur (>= 7/10)
     cursor.execute('''
         SELECT * FROM ratings 
         WHERE user_id = ? AND score >= 7
@@ -544,6 +597,7 @@ def user_profile(user_id):
     
     conn.close()
     
+    # Vérifier si l'utilisateur actuel suit ce profil
     is_following = False
     if 'user_id' in session and session['user_id'] != user_id:
         is_following = db.is_following(session['user_id'], user_id)
@@ -563,16 +617,20 @@ def add_artist_from_spotify(spotify_id):
         flash('L\'API Spotify n\'est pas configurée', 'danger')
         return redirect(url_for('search'))
     
+    # Vérifier si l'artiste existe déjà
     existing_artist = db.get_artist_by_spotify_id(spotify_id)
     if existing_artist:
+        # Si l'artiste existe, importer quand même ses albums manquants
         return redirect(url_for('artist_detail', artist_id=existing_artist.id))
     
+    # Récupérer les détails depuis Spotify
     artist_data = spotify.get_artist_details(spotify_id)
     
     if not artist_data:
         flash('Impossible de récupérer les informations de l\'artiste', 'danger')
         return redirect(url_for('search'))
     
+    # Créer l'artiste
     artist_id = db.create_artist(
         artist_data['name'],
         artist_data['id'],
@@ -584,6 +642,7 @@ def add_artist_from_spotify(spotify_id):
         flash('Erreur lors de la création de l\'artiste', 'danger')
         return redirect(url_for('search'))
     
+    # Importer les albums
     albums_added = import_artist_albums(artist_id, spotify_id)
     
     
@@ -615,14 +674,17 @@ def update_bio():
 def update_profile_image():
     """Mettre à jour l'image de profil"""
     
+    # Vérifier si un fichier a été uploadé
     if 'profile_image_file' in request.files:
         file = request.files['profile_image_file']
         
+        # Si l'utilisateur a sélectionné un fichier
         if file and file.filename != '':
             if not allowed_file(file.filename):
                 flash('Format de fichier non autorisé. Utilisez PNG, JPG, JPEG, GIF ou WEBP.', 'danger')
                 return redirect(url_for('user_profile', user_id=session['user_id']))
             
+            # Supprimer l'ancienne image si elle existe
             conn = db.get_connection()
             cursor = conn.cursor()
             cursor.execute('SELECT profile_image FROM users WHERE id = ?', (session['user_id'],))
@@ -631,7 +693,7 @@ def update_profile_image():
             if old_image and old_image['profile_image']:
                 old_image_path = old_image['profile_image']
                 if old_image_path.startswith('/static/'):
-                    old_image_path = old_image_path[8:]  
+                    old_image_path = old_image_path[8:]  # Enlever '/static/'
                     full_path = os.path.join('static', old_image_path)
                     if os.path.exists(full_path):
                         try:
@@ -639,13 +701,16 @@ def update_profile_image():
                         except:
                             pass
             
+            # Générer un nom de fichier unique
             filename = secure_filename(file.filename)
             name, ext = os.path.splitext(filename)
             unique_filename = f"user_{session['user_id']}_{int(datetime.now().timestamp())}{ext}"
             
+            # Sauvegarder le fichier
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
             file.save(filepath)
             
+            # Enregistrer le chemin dans la base de données (avec /static/ pour l'affichage)
             db_path = f"/static/uploads/profiles/{unique_filename}"
             
             cursor.execute('UPDATE users SET profile_image = ? WHERE id = ?', 
@@ -656,9 +721,11 @@ def update_profile_image():
             flash('Photo de profil mise à jour avec succès !', 'success')
             return redirect(url_for('user_profile', user_id=session['user_id']))
     
+    # Si pas de fichier, vérifier si une URL a été fournie
     profile_image_url = request.form.get('profile_image_url', '').strip()
     
     if profile_image_url:
+        # Validation basique de l'URL
         if not (profile_image_url.startswith('http://') or profile_image_url.startswith('https://')):
             flash('URL d\'image invalide', 'danger')
             return redirect(url_for('user_profile', user_id=session['user_id']))
@@ -677,6 +744,7 @@ def update_profile_image():
     return redirect(url_for('user_profile', user_id=session['user_id']))
 
 
+# Route pour supprimer la photo de profil
 @app.route('/profile/delete-image', methods=['POST'])
 @login_required
 def delete_profile_image():
@@ -684,14 +752,16 @@ def delete_profile_image():
     conn = db.get_connection()
     cursor = conn.cursor()
     
+    # Récupérer l'image actuelle
     cursor.execute('SELECT profile_image FROM users WHERE id = ?', (session['user_id'],))
     result = cursor.fetchone()
     
     if result and result['profile_image']:
         image_path = result['profile_image']
         
+        # Supprimer le fichier si c'est un upload local
         if image_path.startswith('/static/'):
-            image_path = image_path[8:]  
+            image_path = image_path[8:]  # Enlever '/static/'
             full_path = os.path.join('static', image_path)
             if os.path.exists(full_path):
                 try:
@@ -699,6 +769,7 @@ def delete_profile_image():
                 except:
                     pass
         
+        # Supprimer de la base de données
         cursor.execute('UPDATE users SET profile_image = NULL WHERE id = ?', (session['user_id'],))
         conn.commit()
         flash('Photo de profil supprimée', 'info')
@@ -711,8 +782,10 @@ def delete_profile_image():
 @login_required
 def friends():
     """Page des amis de l'utilisateur"""
+    # Récupérer la liste des amis
     friends_list = db.get_user_friends(session['user_id'])
     
+    # Récupérer les notes récentes des amis
     friends_recent_ratings = db.get_friends_recent_ratings(session['user_id'], limit=20)
     
     return render_template('friends.html', 
@@ -724,7 +797,7 @@ def friends():
 def follow_user(user_id):
     """Suivre un utilisateur"""
     if user_id == session['user_id']:
-        flash('Vous ne pouvez pas vous suivre vous-même nan mais sérieux vous vous prenez pour qui', 'warning')
+        flash('Vous ne pouvez pas vous suivre vous-même', 'warning')
         return redirect(url_for('user_profile', user_id=user_id))
     
     db.follow_user(session['user_id'], user_id)
@@ -754,6 +827,7 @@ def forgot_password():
             flash('Veuillez entrer votre adresse email', 'danger')
             return render_template('forgot_password.html')
         
+        # Vérifier si l'email existe
         conn = db.get_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
@@ -761,22 +835,28 @@ def forgot_password():
         conn.close()
         
         if user:
+            # Générer un token de réinitialisation
             token = secrets.token_urlsafe(32)
-            expiry = datetime.now() + timedelta(hours=1)  
+            expiry = datetime.now() + timedelta(hours=1)  # Token valide 1h
+            
+            # Stocker le token
             reset_tokens[token] = {
                 'user_id': user['id'],
                 'email': email,
                 'expiry': expiry
             }
             
-
+            # En production, envoyez un email ici
+            # Pour le développement, on affiche juste le lien
             reset_link = url_for('reset_password', token=token, _external=True)
             
-            flash(f'Un lien de réinitialisation a été généré', 'info')
+            flash(f'Un lien de réinitialisation a été généré. En production, il serait envoyé par email.', 'info')
             flash(f'Lien de test (copier ce lien) : {reset_link}', 'warning')
             
+            # Message de succès générique (pour la sécurité)
             flash('Si un compte existe avec cet email, un lien de réinitialisation sera envoyé.', 'success')
         else:
+            # Ne pas révéler si l'email existe ou non (sécurité)
             flash('Si un compte existe avec cet email, un lien de réinitialisation sera envoyé.', 'success')
         
         return redirect(url_for('login'))
@@ -788,12 +868,14 @@ def forgot_password():
 def reset_password(token):
     """Page de réinitialisation du mot de passe avec token"""
     
+    # Vérifier si le token existe et est valide
     if token not in reset_tokens:
         flash('Lien de réinitialisation invalide ou expiré', 'danger')
         return redirect(url_for('login'))
     
     token_data = reset_tokens[token]
     
+    # Vérifier l'expiration
     if datetime.now() > token_data['expiry']:
         del reset_tokens[token]
         flash('Le lien de réinitialisation a expiré. Veuillez faire une nouvelle demande.', 'danger')
@@ -803,6 +885,7 @@ def reset_password(token):
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
         
+        # Validation
         if not password or not confirm_password:
             flash('Tous les champs sont requis', 'danger')
             return render_template('reset_password.html', token=token)
@@ -815,6 +898,7 @@ def reset_password(token):
             flash('Le mot de passe doit contenir au moins 6 caractères', 'danger')
             return render_template('reset_password.html', token=token)
         
+        # Mettre à jour le mot de passe
         from models import User
         new_password_hash = User.hash_password(password)
         
@@ -827,6 +911,7 @@ def reset_password(token):
         conn.commit()
         conn.close()
         
+        # Supprimer le token utilisé
         del reset_tokens[token]
         
         flash('Mot de passe réinitialisé avec succès ! Vous pouvez maintenant vous connecter.', 'success')
@@ -834,6 +919,7 @@ def reset_password(token):
     
     return render_template('reset_password.html', token=token)
  
+ # À ajouter dans app.py après les autres routes
 
 # ========== PARAMÈTRES UTILISATEUR ==========
 
@@ -852,6 +938,7 @@ def update_username():
     new_username = request.form.get('new_username', '').strip()
     password = request.form.get('password', '')
     
+    # Validation
     if not new_username or not password:
         flash('Tous les champs sont requis', 'danger')
         return redirect(url_for('settings'))
@@ -860,11 +947,13 @@ def update_username():
         flash('Le nom d\'utilisateur doit contenir entre 3 et 30 caractères', 'danger')
         return redirect(url_for('settings'))
     
+    # Vérifier le mot de passe
     user = db.get_user_by_id(session['user_id'])
     if not user.check_password(password):
         flash('Mot de passe incorrect', 'danger')
         return redirect(url_for('settings'))
     
+    # Vérifier si le nom d'utilisateur existe déjà
     existing_user = db.get_user_by_username(new_username)
     if existing_user and existing_user.id != session['user_id']:
         flash('Ce nom d\'utilisateur est déjà pris', 'danger')
@@ -1012,7 +1101,7 @@ def delete_account():
     # Déconnecter l'utilisateur
     session.clear()
     
-    flash('Votre compte a été supprimé avec succès. Allez bye looser !.', 'info')
+    flash('Votre compte a été supprimé avec succès. Nous sommes tristes de vous voir partir.', 'info')
     return redirect(url_for('index'))
 
 
@@ -1035,12 +1124,12 @@ if __name__ == '__main__':
     ╔═══════════════════════════════════════════════╗
     ║   🎵 Site de notation musicale - Flask 🎵    ║
     ╠═══════════════════════════════════════════════╣
-    ║  Serveur démarré sur http://127.0.0.1:5000    ║
+    ║  Serveur démarré sur http://127.0.0.1:5000   ║
     ║                                               ║
-    ║                                               ║
-    ║                                               ║
-    ║                                               ║ 
-    ║                                               ║
+    ║  📝 Configuration Spotify requise:            ║
+    ║  1. Allez sur developer.spotify.com          ║
+    ║  2. Créez une application                    ║
+    ║  3. Ajoutez vos identifiants dans app.py     ║
     ╚═══════════════════════════════════════════════╝
     """)
     app.run(debug=True, use_reloader=False)
