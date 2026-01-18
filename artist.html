@@ -1,0 +1,144 @@
+<!-- ================================================
+     ARTIST.HTML - PAGE DE DÉTAIL D'UN ARTISTE
+     ================================================ -->
+
+{% extends "base.html" %}
+{% block title %}{{ artist.name }}{% endblock %}
+{% block content %}
+
+<head>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+	
+<div class="row mb-4">
+    <!-- ================================================
+         COLONNE GAUCHE : IMAGE DE L'ARTISTE
+         ================================================ -->
+    <div class="col-md-3 text-center">
+        {% if artist.image_url %}
+        <img src="{{ artist.image_url }}" class="img-fluid rounded-circle shadow-lg mb-3" alt="{{ artist.name }}">
+        {% endif %}
+    </div>
+    
+    <!-- ================================================
+         COLONNE DROITE : INFORMATIONS ET TAGS
+         ================================================ -->
+    <div class="col-md-9">
+        <!-- Nom de l'artiste -->
+        <h1>{{ artist.name }}</h1>
+        
+        <!-- Genres musicaux -->
+        {% if artist.genres %}
+        <p class="lead text-muted">{{ artist.genres|join(', ') }}</p>
+        {% endif %}
+        
+        <!-- ================================================
+             SECTION : TAGS
+             ================================================ -->
+        {% if tags %}
+        <div class="mb-3">
+            <h5>Tags</h5>
+            <div class="d-flex flex-wrap gap-2">
+                {% for tag in tags %}
+                <div class="d-inline-flex align-items-center">
+                    <!-- Badge du tag avec compteur -->
+                    <span class="badge bg-secondary">
+                        {{ tag['tag_name'] }} ({{ tag['count'] }})
+                    </span>
+                    
+                    <!-- Bouton de suppression (si c'est son propre tag) -->
+                    {% if session.user_id == tag['user_id'] %}
+                    <form method="POST" action="{{ url_for('delete_tag', artist_id=artist.id, tag_id=tag['id']) }}" class="d-inline ms-1" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce tag ?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger p-0 px-1" style="font-size: 0.7rem; line-height: 1;">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- ================================================
+             FORMULAIRE : AJOUTER UN TAG (si connecté)
+             ================================================ -->
+        {% if session.user_id %}
+        <div class="card mb-3" style="background-color: rgba(40, 40, 40, 0.5);">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_artist_tag', artist_id=artist.id) }}" class="row g-2 align-items-end">
+                    <div class="col-auto flex-grow-1">
+                        <label for="tag" class="form-label mb-1">
+                            <i class="bi bi-tag"></i> Ajouter un tag
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control search-box" 
+                            id="tag" 
+                            name="tag" 
+                            placeholder="ex: rock, pop, indie..."
+                            required
+                        >
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Ajouter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION : ALBUMS DE L'ARTISTE
+     ================================================ -->
+<h3 class="mb-4">Albums</h3>
+
+{% if albums %}
+<div class="row row-cols-1 row-cols-md-4 g-4">
+    {% for album in albums %}
+    <div class="col">
+        <div class="card h-100">
+            <a href="{{ url_for('album_detail', album_id=album.id) }}" class="text-decoration-none">
+                <!-- Image de l'album -->
+                {% if album.image_url %}
+                <img src="{{ album.image_url }}" class="card-img-top album-cover" alt="{{ album.title }}">
+                {% else %}
+                <div class="album-cover bg-secondary d-flex align-items-center justify-content-center">
+                    <i class="bi bi-disc" style="font-size: 4rem; color: #666;"></i>
+                </div>
+                {% endif %}
+                
+                <!-- Informations de l'album -->
+                <div class="card-body">
+                    <h5 class="card-title text-white">{{ album.title }}</h5>
+                    
+                    <!-- Année de sortie -->
+                    {% if album.release_date %}
+                    <p class="card-text text-muted">{{ album.release_date[:4] }}</p>
+                    {% endif %}
+                    
+                    <!-- Note moyenne -->
+                    {% if album.avg_rating %}
+                    <div class="rating-stars">
+                        <i class="bi bi-star-fill"></i> {{ album.avg_rating }}/10
+                    </div>
+                    {% endif %}
+                </div>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Message si aucun album -->
+<div class="alert alert-info text-center">
+    <i class="bi bi-info-circle"></i>
+    Aucun album trouvé pour cet artiste dans la base de données.
+</div>
+{% endif %}
+
+{% endblock %}

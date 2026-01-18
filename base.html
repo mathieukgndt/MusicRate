@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Titre dynamique de la page -->
+    <title>{% block title %}Site de Notation Musicale{% endblock %}</title>
+    
+    <!-- Intégration Bootstrap 5.3.0 pour le design responsive -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Icônes Bootstrap pour les symboles visuels -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- Styles pour les modals : empêche le backdrop de s'afficher -->
+    <style>
+    body.modal-open .modal-backdrop {
+        display: none !important;
+    }
+    
+    body.modal-open .modal {
+        background-color: rgba(0, 0, 0, 0.5) !important;
+    }
+    </style>
+    
+    <style>
+        /* ================================================
+           CANVAS DE FOND ANIMÉ
+           ================================================ */
+        
+        /* Désactive les interactions avec le canvas pour éviter les problèmes de clics */
+        #bg-canvas {
+            pointer-events: none !important;
+        }
+
+        /* ================================================
+           CONFIGURATION DES MODALS
+           ================================================ */
+        
+        /* Z-index du backdrop de modal */
+        .modal-backdrop {
+            z-index: 1040 !important;
+        }
+
+        /* Z-index de la modal elle-même */
+        .modal {
+            z-index: 1055 !important;
+        }
+
+        /* Réactive les interactions sur le contenu de la modal */
+        .modal-dialog {
+            pointer-events: auto !important;
+        }
+
+        .modal-content {
+            pointer-events: auto !important;
+        }
+
+        .modal * {
+            pointer-events: auto !important;
+        }
+
+        /* ================================================
+           STRUCTURE ET FOND DE LA PAGE
+           ================================================ */
+        
+        /* Configuration de base du body avec fond animé */
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Canvas positionné en arrière-plan fixe */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* Structure flexbox pour garder le footer en bas */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Le contenu principal prend tout l'espace disponible */
+        main.container {
+            flex: 1 0 auto;
+        }
+
+        /* Le footer reste en bas */
+        footer {
+            flex-shrink: 0;
+        }
+
+        /* Assure que navbar, main et footer sont au-dessus du canvas */
+        .navbar,
+        main,
+        footer {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ================================================
+           STYLE DES MODALS
+           ================================================ */
+        
+        /* Modal avec effet glassmorphism */
+        .modal-content {
+            background: rgba(40, 40, 40, 0.95) !important;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        /* Bordures des sections de modal */
+        .modal-header {
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-footer {
+            border-top-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* ================================================
+           FOND ANIMÉ AVEC DÉGRADÉ
+           ================================================ */
+        
+        /* Dégradé de couleurs sombres avec animation */
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #0f2027 50%, #1a1a1a 75%, #0a0a0a 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Animation de déplacement du dégradé */
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Effet de particules lumineuses en arrière-plan */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(138, 43, 226, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ================================================
+           NAVBAR (BARRE DE NAVIGATION)
+           ================================================ */
+        
+        /* Navbar avec effet glassmorphism et flou */
+        .navbar {
+            background: rgba(25, 20, 20, 0.85) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            border-bottom: 1px solid rgba(168, 85, 247, 0.1);
+            position: relative;
+            z-index: 1000;
+        }
+
+        /* Logo/marque de l'application */
+        .navbar-brand {
+            color: #a855f7 !important;
+            font-weight: bold;
+            font-size: 1.5rem;
+            text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        /* Effet au survol du logo */
+        .navbar-brand:hover {
+            text-shadow: 0 0 30px rgba(168, 85, 247, 0.8);
+            transform: scale(1.05);
+        }
+
+        /* Liens de navigation */
+        .nav-link {
+            color: #b3b3b3 !important;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        /* Ligne de soulignement animée au survol */
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: #a855f7;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .nav-link:hover {
+            color: #fff !important;
+        }
+
+        .nav-link:hover::after {
+            width: 80%;
+        }
+
+        /* ================================================
+           CARDS (CARTES DE CONTENU)
+           ================================================ */
+        
+        /* Card avec effet glassmorphism */
+        .card {
+            background: rgba(40, 40, 40, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Effet de brillance au survol des cards */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(168, 85, 247, 0.1),
+                transparent
+            );
+            transform: translateX(-100%) translateY(-100%) rotate(45deg);
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+            animation: shine 1.5s infinite;
+        }
+
+        /* Animation de brillance */
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        /* Effet de levée et brillance au survol */
+        .card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 
+                0 20px 40px rgba(168, 85, 247, 0.3),
+                0 0 40px rgba(168, 85, 247, 0.2),
+                inset 0 0 0 1px rgba(168, 85, 247, 0.3);
+            border-color: rgba(168, 85, 247, 0.5);
+        }
+
+        /* ================================================
+           BOUTONS
+           ================================================ */
+        
+        /* Bouton principal avec dégradé violet */
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+            border: none;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        /* Effet de cercle qui se propage au clic */
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-primary:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Effet au survol du bouton principal */
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 25px rgba(168, 85, 247, 0.6),
+                0 0 30px rgba(168, 85, 247, 0.4);
+        }
+
+        /* Bouton avec bordure transparente */
+        .btn-outline-light {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #a855f7;
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* ================================================
+           ÉTOILES DE NOTATION
+           ================================================ */
+        
+        /* Étoiles avec effet scintillant */
+        .rating-stars {
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            animation: sparkle 2s infinite;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 1; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+            50% { opacity: 0.8; text-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+        }
+
+        /* ================================================
+           IMAGES D'ALBUMS
+           ================================================ */
+        
+        /* Couverture d'album avec effet de zoom au survol */
+        .album-cover {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 12px;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .album-cover:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(168, 85, 247, 0.4);
+        }
+
+        /* ================================================
+           CHAMPS DE FORMULAIRE
+           ================================================ */
+        
+        /* Champ de recherche avec effet néon au focus */
+        .search-box {
+            background: rgba(40, 40, 40, 0.7);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(64, 64, 64, 0.5);
+            color: #fff;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            border-color: #a855f7;
+            background: rgba(40, 40, 40, 0.9);
+            color: #fff;
+            box-shadow: 
+                0 0 0 0.2rem rgba(168, 85, 247, 0.25),
+                0 0 20px rgba(168, 85, 247, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* ================================================
+           FOOTER
+           ================================================ */
+        
+        /* Pied de page avec dégradé transparent */
+        footer {
+            background: linear-gradient(180deg, transparent 0%, rgba(25, 20, 20, 0.8) 100%);
+            backdrop-filter: blur(10px);
+            margin-top: 50px;
+            padding: 20px 0;
+            border-top: 1px solid rgba(168, 85, 247, 0.1);
+        }
+
+        /* ================================================
+           MENU DÉROULANT
+           ================================================ */
+        
+        /* Dropdown stylisé avec glassmorphism */
+        .dropdown-menu {
+            background: rgba(40, 40, 40, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Items du menu déroulant */
+        .dropdown-item {
+            color: #fff;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+            margin: 5px;
+        }
+
+        .dropdown-item:hover {
+            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+            transform: translateX(5px);
+        }
+
+        /* ================================================
+           AUTRES ÉLÉMENTS
+           ================================================ */
+        
+        /* Container principal avec z-index pour rester au-dessus du canvas */
+        main.container {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Effet de pulsation pour les badges */
+        .badge {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* ================================================
+           SCROLLBAR PERSONNALISÉE
+           ================================================ */
+        
+        /* Largeur de la scrollbar */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        /* Fond de la scrollbar */
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        /* Curseur de la scrollbar avec dégradé */
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #8b5cf6 0%, #a855f7 100%);
+            border-radius: 10px;
+        }
+
+        .scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #a855f7 0%, #8b5cf6 100%);
+        }
+
+        /* ================================================
+           GESTION DES IMAGES
+           ================================================ */
+        
+        /* Transition douce lors du chargement des images */
+        img {
+            transition: opacity 0.3s ease;
+        }
+
+        img:not([src]) {
+            opacity: 0;
+        }
+
+        /* ================================================
+           ALERTES
+           ================================================ */
+        
+        /* Alerte stylisée avec glassmorphism */
+        .alert {
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+    
+    <!-- Bloc pour ajouter des styles CSS supplémentaires dans les pages enfants -->
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <!-- Canvas pour l'animation de fond avec particules -->
+    <canvas id="bg-canvas" style="pointer-events: none;"></canvas>
+
+    <!-- ================================================
+         BARRE DE NAVIGATION
+         ================================================ -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <!-- Logo de l'application -->
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-music-note-beamed"></i> MusicRate
+            </a>
+            
+            <!-- Bouton pour mobile (hamburger menu) -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <!-- Contenu du menu de navigation -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- Liens de navigation principaux -->
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="bi bi-house"></i> Accueil
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('search') }}">
+                            <i class="bi bi-search"></i> Rechercher
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- Barre de recherche intégrée -->
+                <form class="d-flex me-3" action="{{ url_for('search') }}" method="get">
+                    <input class="form-control search-box" type="search" name="q" placeholder="Rechercher..." aria-label="Search">
+                    
+                    <!-- Bouton Amis si connecté, sinon bouton Rechercher -->
+                    {% if session.user_id %}
+                    <a href="{{ url_for('friends') }}" class="btn btn-primary ms-2">
+                        <i class="bi bi-people-fill"></i> Amis
+                    </a>
+                    {% else %}
+                    <button class="btn btn-primary ms-2" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    {% endif %}
+                </form>
+                
+                <!-- Menu utilisateur (connecté ou non) -->
+                <ul class="navbar-nav">
+                    {% if session.user_id %}
+                        <!-- Menu dropdown si l'utilisateur est connecté -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle"></i> {{ session.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{{ url_for('user_profile', user_id=session.user_id) }}"><i class="bi bi-person"></i> Mon profil</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('settings') }}"><i class="bi bi-gear"></i> Paramètres</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> Déconnexion</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <!-- Liens de connexion/inscription si non connecté -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">
+                                <i class="bi bi-box-arrow-in-right"></i> Connexion
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('register') }}">
+                                <i class="bi bi-person-plus"></i> Inscription
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ================================================
+         MESSAGES FLASH (notifications)
+         ================================================ -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <!-- Affichage des messages avec leur catégorie (success, danger, info, etc.) -->
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- ================================================
+         CONTENU PRINCIPAL (varie selon la page)
+         ================================================ -->
+    <main class="container my-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ================================================
+         FOOTER (pied de page)
+         ================================================ -->
+    <footer class="text-center text-muted">
+        <div class="container">
+            <p>&copy; 2025 MusicRate - Site de notation musicale par Cudizio Nathan et Mathieu le divin programmeur supreme</p>
+            <p>
+                <small>Propulsé par Flask et l'API Spotify</small>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Intégration de Bootstrap JavaScript pour les composants interactifs -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- ================================================
+         SCRIPT D'ANIMATION DU FOND
+         ================================================ -->
+    <script>
+        // ===== CONFIGURATION DU CANVAS =====
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Adapter la taille du canvas à la fenêtre
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // ===== SYSTÈME DE PARTICULES =====
+        const particles = [];
+        const particleCount = 50; // Nombre de particules à afficher
+
+        // Classe représentant une particule
+        class Particle {
+            constructor() {
+                // Position aléatoire initiale
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                // Taille aléatoire entre 1 et 4 pixels
+                this.size = Math.random() * 3 + 1;
+                // Vitesse de déplacement réduite pour un effet subtil
+                this.speedX = (Math.random() * 0.5 - 0.25) * 0.5;
+                this.speedY = (Math.random() * 0.5 - 0.25) * 0.5;
+                // Couleur violette avec opacité variable
+                this.color = `rgba(168, 85, 247, ${Math.random() * 0.5 + 0.2})`;
+            }
+
+            // Met à jour la position de la particule
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // Fait réapparaître la particule de l'autre côté si elle sort de l'écran
+                if (this.x > canvas.width) this.x = 0;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.y > canvas.height) this.y = 0;
+                if (this.y < 0) this.y = canvas.height;
+            }
+
+            // Dessine la particule sur le canvas
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Crée toutes les particules
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        // ===== FONCTION D'ANIMATION PRINCIPALE =====
+        function animate() {
+            // Efface le canvas pour la prochaine frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dessine un premier gradient lumineux (en haut à gauche)
+            const gradient1 = ctx.createRadialGradient(
+                canvas.width * 0.2, canvas.height * 0.5, 0,
+                canvas.width * 0.2, canvas.height * 0.5, canvas.width * 0.4
+            );
+            gradient1.addColorStop(0, 'rgba(138, 43, 226, 0.15)');
+            gradient1.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient1;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Dessine un second gradient lumineux (en bas à droite)
+            const gradient2 = ctx.createRadialGradient(
+                canvas.width * 0.8, canvas.height * 0.8, 0,
+                canvas.width * 0.8, canvas.height * 0.8, canvas.width * 0.3
+            );
+            gradient2.addColorStop(0, 'rgba(147, 51, 234, 0.1)');
+            gradient2.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient2;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Met à jour et dessine chaque particule
+            particles.forEach(particle => {
+                particle.update();
+                particle.draw();
+            });
+
+            // Dessine des lignes entre les particules proches
+            particles.forEach((p1, i) => {
+                particles.slice(i + 1).forEach(p2 => {
+                    // Calcule la distance entre deux particules
+                    const dx = p1.x - p2.x;
+                    const dy = p1.y - p2.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // Si les particules sont assez proches, trace une ligne
+                    if (distance < 150) {
+                        ctx.strokeStyle = `rgba(168, 85, 247, ${0.2 * (1 - distance / 150)})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                });
+            });
+
+            // Demande la prochaine frame d'animation
+            requestAnimationFrame(animate);
+        }
+
+        // Démarre l'animation
+        animate();
+
+        // ===== GESTION DU REDIMENSIONNEMENT =====
+        // Adapte le canvas si la fenêtre change de taille
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+    
+    <!-- Bloc pour ajouter des scripts JavaScript supplémentaires dans les pages enfants -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

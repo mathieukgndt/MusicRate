@@ -1,0 +1,170 @@
+<!-- ================================================
+     RATING_REPLIES.HTML - RÉPONSES AUX CRITIQUES
+     ================================================ -->
+
+{% extends "base.html" %}
+{% block title %}Réponses à la critique - {{ album.title }}{% endblock %}
+{% block content %}
+
+<head>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<!-- Bouton retour -->
+<div class="mb-4">
+    <a href="{{ url_for('album_detail', album_id=album.id) }}" class="btn btn-outline-light">
+        <i class="bi bi-arrow-left"></i> Retour à l'album
+    </a>
+</div>
+
+<!-- ================================================
+     EN-TÊTE : INFORMATIONS DE L'ALBUM
+     ================================================ -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        {% if album.image_url %}
+        <img src="{{ album.image_url }}" class="img-fluid rounded shadow" alt="{{ album.title }}">
+        {% endif %}
+    </div>
+    <div class="col-md-10">
+        <h2>
+            <a href="{{ url_for('album_detail', album_id=album.id) }}" class="text-white text-decoration-none">
+                {{ album.title }}
+            </a>
+        </h2>
+        <h4 class="text-muted">
+            <a href="{{ url_for('artist_detail', artist_id=artist.id) }}" class="text-muted text-decoration-none">
+                {{ artist.name }}
+            </a>
+        </h4>
+    </div>
+</div>
+
+<!-- ================================================
+     CRITIQUE ORIGINALE
+     ================================================ -->
+<div class="card mb-4" style="background-color: #282828; border-left: 4px solid #1DB954;">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h5>
+                    <i class="bi bi-person-circle"></i>
+                    <a href="{{ url_for('user_profile', user_id=rating.user.id) }}" class="text-white text-decoration-none">
+                        {{ rating.user.username }}
+                    </a>
+                </h5>
+                <small class="text-muted">{{ rating.created_at }}</small>
+            </div>
+            <span class="rating-stars">
+                <h4><i class="bi bi-star-fill"></i> {{ rating.score }}/10</h4>
+            </span>
+        </div>
+        
+        {% if rating.review %}
+        <p class="mb-0" style="font-size: 1.1rem;">{{ rating.review }}</p>
+        {% else %}
+        <p class="mb-0 text-muted fst-italic">Aucune critique écrite</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Titre de la section réponses -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>
+        <i class="bi bi-chat-dots"></i> 
+        Réponses 
+        <span class="badge bg-secondary">{{ replies|length }}</span>
+    </h4>
+</div>
+
+<!-- ================================================
+     FORMULAIRE D'AJOUT DE RÉPONSE (si connecté)
+     ================================================ -->
+{% if session.user_id %}
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('add_reply', rating_id=rating.id) }}">
+            <div class="mb-3">
+                <label class="form-label">
+                    <i class="bi bi-reply"></i> Ajouter une réponse
+                </label>
+                <textarea 
+                    class="form-control search-box" 
+                    name="content" 
+                    rows="3" 
+                    placeholder="Partagez votre opinion sur cette critique..."
+                    required
+                ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send"></i> Publier la réponse
+            </button>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    <a href="{{ url_for('login') }}" class="alert-link">Connectez-vous</a> pour répondre à cette critique
+</div>
+{% endif %}
+
+<!-- ================================================
+     LISTE DES RÉPONSES
+     ================================================ -->
+{% if replies %}
+<div class="replies-container">
+    {% for reply in replies %}
+    <div class="card mb-3" style="border-left: 3px solid #404040;">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <!-- En-tête de la réponse -->
+                    <div class="d-flex align-items-center mb-2">
+                        <h6 class="mb-0 me-2">
+                            <a href="{{ url_for('user_profile', user_id=reply.user.id) }}" class="text-white text-decoration-none">
+                                <i class="bi bi-person"></i> {{ reply.user.username }}
+                            </a>
+                        </h6>
+                        <small class="text-muted">{{ reply.created_at }}</small>
+                    </div>
+                    
+                    <!-- Contenu de la réponse -->
+                    <p class="mb-0">{{ reply.content }}</p>
+                </div>
+                
+                <!-- Bouton de suppression (seulement pour l'auteur) -->
+                {% if session.user_id and session.user_id == reply.user_id %}
+                <div class="ms-3">
+                    <form method="POST" action="{{ url_for('delete_reply', rating_id=rating.id, reply_id=reply.id) }}" style="display: inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette réponse ?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info text-center" style="background-color: #1a3a52; border-color: #1DB954; color: #fff;">
+    <i class="bi bi-chat"></i>
+    Aucune réponse pour le moment. Soyez le premier à répondre !
+</div>
+{% endif %}
+
+<!-- Style personnalisé pour les réponses -->
+<style>
+    .replies-container .card {
+        transition: all 0.2s ease;
+    }
+    
+    .replies-container .card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 15px rgba(29, 185, 84, 0.2);
+    }
+</style>
+
+{% endblock %}

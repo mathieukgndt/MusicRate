@@ -1,0 +1,91 @@
+<!-- ================================================
+     LOGIN.HTML - PAGE DE CONNEXION
+     ================================================ -->
+
+{% extends "base.html" %}
+{% block title %}Connexion - MusicRate{% endblock %}
+{% block content %}
+
+<head>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<!-- Container centré pour le formulaire de connexion -->
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <!-- Card avec effet glassmorphism -->
+        <div class="card glass">
+            <div class="card-body p-5">
+                <!-- En-tête du formulaire -->
+                <div class="text-center mb-4">
+                    <!-- Icône de profil circulaire -->
+                    <i class="bi bi-person-circle display-1" style="color: var(--primary-color);"></i>
+                    <h2 class="mt-3">Connexion</h2>
+                    <p style="color: var(--text-secondary);">Connectez-vous pour noter vos albums préférés</p>
+                </div>
+
+                <!-- Formulaire de connexion (POST vers la route login) -->
+                <form method="POST" action="{{ url_for('login') }}">
+                    <!-- Champ : Nom d'utilisateur -->
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            <i class="bi bi-person"></i> Nom d'utilisateur
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control search-box" 
+                            id="username" 
+                            name="username" 
+                            placeholder="Votre nom d'utilisateur"
+                            required
+                            autofocus
+                        >
+                    </div>
+
+                    <!-- Champ : Mot de passe -->
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="bi bi-lock"></i> Mot de passe
+                        </label>
+                        <input 
+                            type="password" 
+                            class="form-control search-box" 
+                            id="password" 
+                            name="password" 
+                            placeholder="Votre mot de passe"
+                            required
+                        >
+                    </div>
+
+                    <!-- Lien "Mot de passe oublié" -->
+                    <div class="mb-3 text-end">
+                        <a href="{{ url_for('forgot_password') }}" style="color: var(--primary-color); font-size: 0.9rem;">
+                            <i class="bi bi-question-circle"></i> Mot de passe oublié ?
+                        </a>
+                    </div>
+
+                    <!-- Bouton de soumission -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right"></i> Se connecter
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Séparateur -->
+                <hr class="my-4" style="border-color: var(--border-color);">
+
+                <!-- Lien vers l'inscription -->
+                <div class="text-center">
+                    <p style="color: var(--text-secondary);">
+                        Pas encore de compte ?
+                        <a href="{{ url_for('register') }}" style="color: var(--primary-color);">
+                            S'inscrire maintenant
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

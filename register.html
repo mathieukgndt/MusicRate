@@ -1,0 +1,63 @@
+<!-- ================================================
+     REGISTER.HTML - PAGE D'INSCRIPTION
+     ================================================ -->
+
+{% extends "base.html" %}
+{% block title %}Inscription{% endblock %}
+{% block content %}
+
+<head>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+	
+<!-- Container centré pour le formulaire d'inscription -->
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-body p-5">
+                <!-- Titre du formulaire -->
+                <h2 class="text-center mb-4">
+                    <i class="bi bi-person-plus"></i> Inscription
+                </h2>
+                
+                <!-- Formulaire d'inscription (POST) -->
+                <form method="POST">
+                    <!-- Champ : Nom d'utilisateur -->
+                    <div class="mb-3">
+                        <label class="form-label">Nom d'utilisateur</label>
+                        <input type="text" class="form-control search-box" name="username" required>
+                    </div>
+                    
+                    <!-- Champ : Email -->
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control search-box" name="email" required>
+                    </div>
+                    
+                    <!-- Champ : Mot de passe -->
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe</label>
+                        <input type="password" class="form-control search-box" name="password" required minlength="6">
+                        <small class="text-muted">Au moins 6 caractères</small>
+                    </div>
+                    
+                    <!-- Champ : Confirmation du mot de passe -->
+                    <div class="mb-3">
+                        <label class="form-label">Confirmer le mot de passe</label>
+                        <input type="password" class="form-control search-box" name="confirm_password" required>
+                    </div>
+                    
+                    <!-- Bouton de soumission -->
+                    <button type="submit" class="btn btn-primary w-100">S'inscrire</button>
+                </form>
+                
+                <!-- Lien vers la connexion si déjà inscrit -->
+                <div class="text-center mt-3">
+                    <p class="text-muted">Déjà un compte ?</p>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light">Se connecter</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

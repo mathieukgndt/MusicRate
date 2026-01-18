@@ -1,0 +1,208 @@
+<!-- ================================================
+     TRACKLIST.HTML - LISTE DES TITRES D'UN ALBUM
+     ================================================ -->
+
+{% extends "base.html" %}
+{% block title %}{{ album.title }} - Liste des titres{% endblock %}
+{% block content %}
+
+<head>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<!-- Bouton retour -->
+<div class="mb-4">
+    <a href="{{ url_for('album_detail', album_id=album.id) }}" class="btn btn-outline-light">
+        <i class="bi bi-arrow-left"></i> Retour à l'album
+    </a>
+</div>
+
+<!-- ================================================
+     EN-TÊTE : INFORMATIONS DE L'ALBUM
+     ================================================ -->
+<div class="row mb-5">
+    <!-- Image de l'album -->
+    <div class="col-md-3">
+        {% if album.image_url %}
+        <img src="{{ album.image_url }}" class="img-fluid rounded shadow-lg" alt="{{ album.title }}">
+        {% else %}
+        <div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="aspect-ratio: 1;">
+            <i class="bi bi-disc display-1"></i>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Informations détaillées -->
+    <div class="col-md-9 d-flex flex-column justify-content-center">
+        <p class="text-muted mb-2">
+            <i class="bi bi-music-note-list"></i> LISTE DES TITRES
+        </p>
+        <h1 class="display-4 mb-3">{{ album.title }}</h1>
+        <h3 class="text-muted mb-3">
+            <a href="{{ url_for('artist_detail', artist_id=artist.id) }}" class="text-decoration-none" style="color: #1DB954;">
+                {{ artist.name }}
+            </a>
+        </h3>
+        
+        <!-- Statistiques de l'album -->
+        <div class="d-flex gap-4 text-muted">
+            <!-- Année de sortie -->
+            {% if album.release_date %}
+            <span>
+                <i class="bi bi-calendar"></i> {{ album.release_date[:4] }}
+            </span>
+            {% endif %}
+            
+            <!-- Nombre de titres -->
+            <span>
+                <i class="bi bi-disc"></i> {{ tracks|length }} titres
+            </span>
+            
+            <!-- Durée totale -->
+            {% if total_minutes > 0 %}
+            <span>
+                <i class="bi bi-clock"></i> {{ total_minutes }} min {{ total_seconds }} sec
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     TABLEAU : LISTE DES TITRES
+     ================================================ -->
+{% if tracks %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="box-shadow: none !important;">
+            <table class="table mb-0" style="color: #fff; box-shadow: none !important;">
+                <!-- En-tête du tableau -->
+                <thead style="border-bottom: 2px solid #404040;">
+                    <tr>
+                        <th style="width: 60px; padding: 1rem; color: #fff;" class="text-center">#</th>
+                        <th style="padding: 1rem; color: #fff;">TITRE</th>
+                        <th style="width: 120px; padding: 1rem; text-align: right; color: #fff;">
+                            <i class="bi bi-clock"></i> DURÉE
+                        </th>
+                    </tr>
+                </thead>
+                
+                <!-- Corps du tableau -->
+                <tbody>
+                    {% for track in tracks %}
+                    <tr class="track-row" style="border-bottom: 1px solid #404040;">
+                        <!-- Numéro du titre -->
+                        <td class="text-center text-muted" style="padding: 1rem;">
+                            <strong>{{ track.track_number }}</strong>
+                        </td>
+                        
+                        <!-- Nom du titre avec icône -->
+                        <td style="padding: 1rem;">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-music-note me-3" style="color: #1DB954;"></i>
+                                <span style="font-size: 1.05rem;">{{ track.name }}</span>
+                            </div>
+                        </td>
+                        
+                        <!-- Durée formatée -->
+                        <td class="text-muted" style="padding: 1rem; text-align: right;">
+                            {{ track.duration_formatted }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Card d'information : Durée totale -->
+<div class="card mt-3" style="background-color: #191414; border: 1px solid #404040;">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">
+                <i class="bi bi-info-circle"></i> Durée totale de l'album
+            </span>
+            <span style="color: #1DB954; font-weight: bold; font-size: 1.1rem;">
+                {{ total_minutes }} minutes {{ total_seconds }} secondes
+            </span>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Message si aucun titre disponible -->
+<div class="alert alert-info text-center">
+    <i class="bi bi-info-circle"></i>
+    Impossible de récupérer la liste des titres pour cet album.
+</div>
+{% endif %}
+
+<!-- ================================================
+     STYLES PERSONNALISÉS POUR LA TRACKLIST
+     ================================================ -->
+<style>
+    /* Désactiver l'effet hover sur cette card */
+    .no-hover-effect {
+        transition: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-bottom: none !important;
+    }
+    
+    .no-hover-effect:hover {
+        transform: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        outline: none !important;
+        border-bottom: none !important;
+    }
+    
+    .card.no-hover-effect:hover {
+        box-shadow: none !important;
+        border-bottom: none !important;
+    }
+    
+    /* Effet hover sur les lignes de titre */
+    .track-row {
+        transition: all 0.2s ease;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    
+    .track-row:hover {
+        background-color: #282828 !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    
+    .track-row:hover td {
+        color: #fff !important;
+        outline: none !important;
+    }
+    
+    /* Suppression des bordures/outline */
+    .table > :not(caption) > * > * {
+        background-color: transparent;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    
+    table, tbody, tr, td, th {
+        outline: none !important;
+        box-shadow: none !important;
+        border-color: #404040 !important;
+    }
+    
+    .card-body {
+        border: none !important;
+        border-bottom: none !important;
+    }
+    
+    .table-responsive {
+        border: none !important;
+        border-bottom: none !important;
+    }
+</style>
+
+{% endblock %}

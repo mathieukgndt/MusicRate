@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Accueil - MusicRate{% endblock %}
+{% block content %}
+
+<head>
+    <!-- Intégration du fichier CSS personnalisé -->
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<!-- ================================================
+     EN-TÊTE DE LA PAGE D'ACCUEIL
+     ================================================ -->
+<div class="row">
+    <div class="col-12 text-center mb-5">
+        <!-- Titre principal avec icône -->
+        <h1 class="display-4 mb-3">
+            <i class="bi bi-music-note-beamed text-success"></i>
+            Bienvenue sur MusicRate
+        </h1>
+        
+        <!-- Sous-titre descriptif -->
+        <p class="lead text-muted">Découvrez, notez et partagez vos albums préférés</p>
+                
+        <!-- Boutons d'action (uniquement si l'utilisateur n'est pas connecté) -->
+        {% if not session.user_id %}
+        <div class="mt-4">
+            <!-- Bouton pour s'inscrire -->
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-2">
+                <i class="bi bi-person-plus"></i> S'inscrire
+            </a>
+            <!-- Bouton pour explorer sans compte -->
+            <a href="{{ url_for('search') }}" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-search"></i> Explorer
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION : ALBUMS LES MIEUX NOTÉS
+     ================================================ -->
+<div class="row mb-4">
+    <div class="col-12">
+        <!-- Titre de la section -->
+        <h2 class="mb-4">
+            <i class="bi bi-star-fill text-warning"></i>
+            Albums les mieux notés
+        </h2>
+    </div>
+</div>
+
+<!-- Affichage des albums si disponibles -->
+{% if top_albums %}
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4 mb-5 pb-4 border-bottom border-secondary">
+    <!-- Boucle sur les meilleurs albums -->
+    {% for item in top_albums %}
+    <div class="col">
+        <!-- Card pour chaque album -->
+        <div class="card h-100">
+            <!-- Lien vers la page détaillée de l'album -->
+            <a href="{{ url_for('album_detail', album_id=item.album.id) }}" class="text-decoration-none">
+                <!-- Image de l'album ou placeholder -->
+                {% if item.album.image_url %}
+                <img src="{{ item.album.image_url }}" class="card-img-top album-cover" alt="{{ item.album.title }}">
+                {% else %}
+                <!-- Si pas d'image, afficher une icône de disque -->
+                <div class="album-cover bg-secondary d-flex align-items-center justify-content-center">
+                    <i class="bi bi-disc" style="font-size: 4rem; color: #666;"></i>
+                </div>
+                {% endif %}
+                                
+                <!-- Corps de la card avec les informations -->
+                <div class="card-body">
+                    <!-- Titre de l'album (tronqué si trop long) -->
+                    <h5 class="card-title text-white text-truncate" title="{{ item.album.title }}">
+                        {{ item.album.title }}
+                    </h5>
+                    
+                    <!-- Nom de l'artiste avec lien -->
+                    <p class="card-text text-muted text-truncate">
+                        <a href="{{ url_for('artist_detail', artist_id=item.artist.id) }}" class="text-muted text-decoration-none">
+                            {{ item.artist.name }}
+                        </a>
+                    </p>
+                                    
+                    <!-- Note moyenne et nombre de notes -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="rating-stars">
+                            <i class="bi bi-star-fill"></i>
+                            <strong>{{ item.avg_score }}/10</strong>
+                        </div>
+                        <small class="text-muted">
+                            {{ item.num_ratings }} notes
+                        </small>
+                    </div>
+                                    
+                    <!-- Année de sortie si disponible -->
+                    {% if item.album.release_date %}
+                    <small class="text-muted d-block mt-2">
+                        <i class="bi bi-calendar"></i> {{ item.album.release_date[:4] }}
+                    </small>
+                    {% endif %}
+                </div>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Message si aucun album n'est noté -->
+<div class="alert alert-info text-center mb-5">
+    <i class="bi bi-info-circle"></i>
+    Aucun album noté pour le moment. Soyez le premier à noter un album !
+</div>
+{% endif %}
+
+<!-- ================================================
+     SECTION : ALBUMS LES MOINS BIEN NOTÉS
+     ================================================ -->
+<div class="row mb-4">
+    <div class="col-12">
+        <!-- Titre de la section -->
+        <h2 class="mb-4">
+            <i class="bi bi-emoji-frown text-danger"></i>
+            Albums les moins bien notés
+        </h2>
+        <p class="text-muted">Parfois il faut savoir quoi éviter... 😅</p>
+    </div>
+</div>
+
+<!-- Affichage des pires albums si disponibles -->
+{% if worst_albums %}
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4 mb-5">
+    <!-- Boucle sur les pires albums -->
+    {% for item in worst_albums %}
+    <div class="col">
+        <!-- Card avec bordure rouge pour indiquer une mauvaise note -->
+        <div class="card h-100" style="border: 2px solid rgba(220, 53, 69, 0.3);">
+            <a href="{{ url_for('album_detail', album_id=item.album.id) }}" class="text-decoration-none">
+                <!-- Image de l'album avec opacité réduite -->
+                {% if item.album.image_url %}
+                <img src="{{ item.album.image_url }}" class="card-img-top album-cover" alt="{{ item.album.title }}" style="opacity: 0.8;">
+                {% else %}
+                <div class="album-cover bg-secondary d-flex align-items-center justify-content-center">
+                    <i class="bi bi-disc" style="font-size: 4rem; color: #666;"></i>
+                </div>
+                {% endif %}
+                                
+                <div class="card-body">
+                    <!-- Titre de l'album -->
+                    <h5 class="card-title text-white text-truncate" title="{{ item.album.title }}">
+                        {{ item.album.title }}
+                    </h5>
+                    
+                    <!-- Nom de l'artiste -->
+                    <p class="card-text text-muted text-truncate">
+                        <a href="{{ url_for('artist_detail', artist_id=item.artist.id) }}" class="text-muted text-decoration-none">
+                            {{ item.artist.name }}
+                        </a>
+                    </p>
+                                    
+                    <!-- Note moyenne en rouge -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div style="color: #dc3545;">
+                            <i class="bi bi-star-fill"></i>
+                            <strong>{{ item.avg_score }}/10</strong>
+                        </div>
+                        <small class="text-muted">
+                            {{ item.num_ratings }} notes
+                        </small>
+                    </div>
+                                    
+                    <!-- Année de sortie -->
+                    {% if item.album.release_date %}
+                    <small class="text-muted d-block mt-2">
+                        <i class="bi bi-calendar"></i> {{ item.album.release_date[:4] }}
+                    </small>
+                    {% endif %}
+                </div>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Message humoristique si aucun album mal noté -->
+<div class="alert alert-secondary text-center mb-5" style="background-color: #1a3a52; border-color: #dc3545; color: #fff;">
+    <i class="bi bi-info-circle"></i>
+    Aucun album mal noté pour le moment. Tout le monde est d'accord !
+</div>
+{% endif %}
+
+<!-- ================================================
+     SECTION : FONCTIONNALITÉS DE L'APPLICATION
+     ================================================ -->
+<div class="row mt-5 py-5 border-top border-secondary">
+    <div class="col-12 text-center mb-4">
+        <h2>Pourquoi MusicRate ?</h2>
+    </div>
+        
+    <!-- Card 1 : Recherche -->
+    <div class="col-md-4 text-center mb-4">
+        <div class="card">
+            <div class="card-body">
+                <i class="bi bi-search display-3 text-success mb-3"></i>
+                <h4>Recherche</h4>
+                <p class="text-muted">
+                    Recherchez des albums et artistes grâce à l'intégration Spotify
+                </p>
+            </div>
+        </div>
+    </div>
+        
+    <!-- Card 2 : Notation -->
+    <div class="col-md-4 text-center mb-4">
+        <div class="card">
+            <div class="card-body">
+                <i class="bi bi-star display-3 text-warning mb-3"></i>
+                <h4>Notation</h4>
+                <p class="text-muted">
+                    Notez et commentez vos albums favoris de 0 à 10
+                </p>
+            </div>
+        </div>
+    </div>
+        
+    <!-- Card 3 : Communauté -->
+    <div class="col-md-4 text-center mb-4">
+        <div class="card">
+            <div class="card-body">
+                <i class="bi bi-people display-3 text-info mb-3"></i>
+                <h4>Communauté</h4>
+                <p class="text-muted">
+                    Suivez d'autres utilisateurs et découvrez leurs goûts musicaux
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

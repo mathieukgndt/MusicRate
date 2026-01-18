@@ -1,0 +1,263 @@
+<!-- ================================================
+     SETTINGS.HTML - PAGE DE PARAMÈTRES DU COMPTE
+     ================================================ -->
+
+{% extends "base.html" %}
+{% block title %}Paramètres - MusicRate{% endblock %}
+{% block content %}
+
+<head>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<!-- En-tête de la page -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-3">
+            <i class="bi bi-gear-fill text-primary"></i> Paramètres du compte
+        </h1>
+        <p class="text-muted">Gérez les informations de votre compte</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- ================================================
+         COLONNE GAUCHE : MENU DE NAVIGATION
+         ================================================ -->
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <!-- Onglet : Nom d'utilisateur (actif par défaut) -->
+                    <a href="#username" class="list-group-item list-group-item-action active" data-bs-toggle="list">
+                        <i class="bi bi-person"></i> Nom d'utilisateur
+                    </a>
+                    
+                    <!-- Onglet : Email -->
+                    <a href="#email" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                        <i class="bi bi-envelope"></i> Adresse email
+                    </a>
+                    
+                    <!-- Onglet : Mot de passe -->
+                    <a href="#password" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                        <i class="bi bi-lock"></i> Mot de passe
+                    </a>
+                    
+                    <!-- Onglet : Zone dangereuse (suppression du compte) -->
+                    <a href="#danger" class="list-group-item list-group-item-action text-danger" data-bs-toggle="list">
+                        <i class="bi bi-exclamation-triangle"></i> Zone dangereuse
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================
+         COLONNE DROITE : CONTENU DES ONGLETS
+         ================================================ -->
+    <div class="col-md-9">
+        <div class="tab-content">
+            
+            <!-- ================================================
+                 ONGLET 1 : CHANGER LE NOM D'UTILISATEUR
+                 ================================================ -->
+            <div class="tab-pane fade show active" id="username">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="bi bi-person"></i> Changer le nom d'utilisateur
+                        </h4>
+                        
+                        <!-- Formulaire de modification du nom -->
+                        <form method="POST" action="{{ url_for('update_username') }}">
+                            <!-- Champ : Nom d'utilisateur actuel (désactivé) -->
+                            <div class="mb-3">
+                                <label for="current_username" class="form-label">Nom d'utilisateur actuel</label>
+                                <input type="text" class="form-control search-box" id="current_username" value="{{ session.username }}" disabled>
+                            </div>
+                            
+                            <!-- Champ : Nouveau nom d'utilisateur -->
+                            <div class="mb-3">
+                                <label for="new_username" class="form-label">Nouveau nom d'utilisateur</label>
+                                <input type="text" class="form-control search-box" id="new_username" name="new_username" placeholder="Entrez votre nouveau nom" required minlength="3" maxlength="30">
+                                <small class="text-muted">Entre 3 et 30 caractères</small>
+                            </div>
+                            
+                            <!-- Champ : Confirmation par mot de passe -->
+                            <div class="mb-3">
+                                <label for="password_confirm" class="form-label">Confirmez votre mot de passe</label>
+                                <input type="password" class="form-control search-box" id="password_confirm" name="password" placeholder="Votre mot de passe actuel" required>
+                            </div>
+                            
+                            <!-- Bouton de soumission -->
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Mettre à jour le nom d'utilisateur
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================
+                 ONGLET 2 : CHANGER L'EMAIL
+                 ================================================ -->
+            <div class="tab-pane fade" id="email">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="bi bi-envelope"></i> Changer l'adresse email
+                        </h4>
+                        
+                        <!-- Formulaire de modification de l'email -->
+                        <form method="POST" action="{{ url_for('update_email') }}">
+                            <!-- Champ : Email actuel (désactivé) -->
+                            <div class="mb-3">
+                                <label for="current_email" class="form-label">Email actuel</label>
+                                <input type="email" class="form-control search-box" id="current_email" value="{{ current_user.email }}" disabled>
+                            </div>
+                            
+                            <!-- Champ : Nouvelle adresse email -->
+                            <div class="mb-3">
+                                <label for="new_email" class="form-label">Nouvelle adresse email</label>
+                                <input type="email" class="form-control search-box" id="new_email" name="new_email" placeholder="nouvelle@email.com" required>
+                            </div>
+                            
+                            <!-- Champ : Confirmation par mot de passe -->
+                            <div class="mb-3">
+                                <label for="password_confirm_email" class="form-label">Confirmez votre mot de passe</label>
+                                <input type="password" class="form-control search-box" id="password_confirm_email" name="password" placeholder="Votre mot de passe actuel" required>
+                            </div>
+                            
+                            <!-- Bouton de soumission -->
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Mettre à jour l'email
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================
+                 ONGLET 3 : CHANGER LE MOT DE PASSE
+                 ================================================ -->
+            <div class="tab-pane fade" id="password">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">
+                            <i class="bi bi-lock"></i> Changer le mot de passe
+                        </h4>
+                        
+                        <!-- Formulaire de modification du mot de passe -->
+                        <form method="POST" action="{{ url_for('update_password') }}">
+                            <!-- Champ : Mot de passe actuel -->
+                            <div class="mb-3">
+                                <label for="current_password" class="form-label">Mot de passe actuel</label>
+                                <input type="password" class="form-control search-box" id="current_password" name="current_password" placeholder="Votre mot de passe actuel" required>
+                            </div>
+                            
+                            <!-- Champ : Nouveau mot de passe -->
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label">Nouveau mot de passe</label>
+                                <input type="password" class="form-control search-box" id="new_password" name="new_password" placeholder="Au moins 6 caractères" required minlength="6">
+                                <small class="text-muted">Minimum 6 caractères</small>
+                            </div>
+                            
+                            <!-- Champ : Confirmation du nouveau mot de passe -->
+                            <div class="mb-3">
+                                <label for="confirm_new_password" class="form-label">Confirmer le nouveau mot de passe</label>
+                                <input type="password" class="form-control search-box" id="confirm_new_password" name="confirm_new_password" placeholder="Retapez le nouveau mot de passe" required>
+                            </div>
+                            
+                            <!-- Bouton de soumission -->
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Mettre à jour le mot de passe
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================
+                 ONGLET 4 : ZONE DANGEREUSE - SUPPRESSION DU COMPTE
+                 ================================================ -->
+            <div class="tab-pane fade" id="danger">
+                <div class="card border-danger">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4 text-danger">
+                            <i class="bi bi-exclamation-triangle"></i> Zone dangereuse
+                        </h4>
+                        
+                        <!-- Alerte d'avertissement -->
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-circle"></i>
+                            <strong>Attention !</strong> Cette action est irréversible. Toutes vos notes, commentaires et données seront définitivement supprimés.
+                        </div>
+
+                        <!-- Formulaire de suppression du compte -->
+                        <form method="POST" action="{{ url_for('delete_account') }}" onsubmit="return confirm('⚠️ ÊTES-VOUS VRAIMENT SÛR ?\n\nCette action est IRRÉVERSIBLE.\n\n✗ Toutes vos notes seront supprimées\n✗ Tous vos commentaires seront supprimés\n✗ Votre compte sera définitivement fermé\n\nTapez SUPPRIMER dans le champ ci-dessous pour confirmer.');">
+                            
+                            <!-- Champ : Confirmation par texte -->
+                            <div class="mb-3">
+                                <label for="delete_confirmation" class="form-label">Tapez "SUPPRIMER" pour confirmer</label>
+                                <input type="text" class="form-control search-box" id="delete_confirmation" name="confirmation" placeholder="SUPPRIMER" required pattern="SUPPRIMER">
+                            </div>
+                            
+                            <!-- Champ : Confirmation par mot de passe -->
+                            <div class="mb-3">
+                                <label for="password_delete" class="form-label">Confirmez votre mot de passe</label>
+                                <input type="password" class="form-control search-box" id="password_delete" name="password" placeholder="Votre mot de passe" required>
+                            </div>
+                            
+                            <!-- Bouton de suppression (rouge) -->
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Supprimer définitivement mon compte
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     STYLES PERSONNALISÉS POUR LES ONGLETS
+     ================================================ -->
+<style>
+    /* Style des items de navigation */
+    .list-group-item-action {
+        background: transparent;
+        color: var(--text-color, #fff);
+        border: none;
+        transition: all 0.3s ease;
+        margin-bottom: 5px;
+        border-radius: 10px;
+    }
+    
+    /* Effet hover sur les items */
+    .list-group-item-action:hover {
+        background: rgba(168, 85, 247, 0.2);
+        color: #fff;
+        transform: translateX(5px);
+    }
+    
+    /* Style de l'item actif */
+    .list-group-item-action.active {
+        background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+        color: #fff;
+        border-color: transparent;
+    }
+    
+    /* Transition douce des cards */
+    .card {
+        transition: all 0.3s ease;
+    }
+    
+    /* Bordure renforcée pour la zone dangereuse */
+    .border-danger {
+        border-width: 2px !important;
+    }
+</style>
+
+{% endblock %}

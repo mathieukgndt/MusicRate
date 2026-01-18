@@ -1,0 +1,202 @@
+<!-- ================================================
+     ALBUM.HTML - PAGE DE DÉTAIL D'UN ALBUM
+     ================================================ -->
+
+{% extends "base.html" %}
+{% block title %}{{ album.title }} - {{ artist.name }}{% endblock %}
+{% block content %}
+
+<head>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+	
+<div class="row">
+    <!-- ================================================
+         COLONNE GAUCHE : IMAGE DE L'ALBUM
+         ================================================ -->
+    <div class="col-md-4">
+        {% if album.image_url %}
+        <img src="{{ album.image_url }}" class="img-fluid rounded shadow-lg mb-3" alt="{{ album.title }}">
+        {% else %}
+        <div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="aspect-ratio: 1;">
+            <i class="bi bi-disc display-1"></i>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- ================================================
+         COLONNE DROITE : INFORMATIONS ET NOTATION
+         ================================================ -->
+    <div class="col-md-8">
+        <!-- Titre de l'album -->
+        <h1>{{ album.title }}</h1>
+        
+        <!-- Nom de l'artiste avec lien -->
+        <h3 class="text-muted">
+            <a href="{{ url_for('artist_detail', artist_id=artist.id) }}" class="text-muted text-decoration-none">
+                {{ artist.name }}
+            </a>
+        </h3>
+        
+        <!-- Date de sortie -->
+        {% if album.release_date %}
+        <p class="text-muted">
+            <i class="bi bi-calendar"></i> {{ album.release_date }}
+        </p>
+        {% endif %}
+        
+        <!-- Note moyenne et nombre de notes -->
+        <div class="card p-3 mb-3">
+            <div class="d-flex align-items-center">
+                <div class="me-4">
+                    <h2 class="mb-0 rating-stars">
+                        <i class="bi bi-star-fill"></i> {{ avg_rating }}/10
+                    </h2>
+                    <small class="text-muted">{{ ratings|length }} notes</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Boutons Spotify et tracklist -->
+        {% if album.spotify_id %}
+        <div class="mb-3 d-flex gap-2 flex-wrap">
+            <!-- Bouton pour voir la liste des titres -->
+            <a href="{{ url_for('album_tracklist', album_id=album.id) }}" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-music-note-list"></i> Voir la liste des titres
+            </a>
+            <!-- Bouton pour écouter sur Spotify -->
+            <a href="https://open.spotify.com/album/{{ album.spotify_id }}" target="_blank" class="btn btn-spotify btn-lg">
+                <i class="bi bi-spotify"></i> Écouter sur Spotify
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- ================================================
+             FORMULAIRE DE NOTATION (si connecté)
+             ================================================ -->
+        {% if session.user_id %}
+        <div class="card p-4 mb-3">
+            <h5>
+                {% if user_rating %}Modifier votre note{% else %}Noter cet album{% endif %}
+            </h5>
+            
+            <!-- Formulaire POST -->
+            <form method="POST" action="{{ url_for('rate_album', album_id=album.id) }}">
+                <!-- Champ : Note (0-10) -->
+                <div class="mb-3">
+                    <label class="form-label">Note (0-10)</label>
+                    <input type="number" class="form-control search-box" name="score" min="0" max="10" step="0.5" value="{{ user_rating.score if user_rating else '' }}" required>
+                </div>
+                
+                <!-- Champ : Critique (optionnel) -->
+                <div class="mb-3">
+                    <label class="form-label">Critique (optionnel)</label>
+                    <textarea class="form-control search-box" name="review" rows="4" placeholder="Partagez votre avis sur cet album...">{{ user_rating.review if user_rating else '' }}</textarea>
+                </div>
+                
+                <!-- Bouton de soumission -->
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-star"></i> Enregistrer
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================================================
+     SECTION : NOTES DES UTILISATEURS
+     ================================================ -->
+{% if ratings %}
+<div class="mt-5">
+    <h3 class="mb-4">Notes et critiques</h3>
+    
+    {% for rating in ratings %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <!-- En-tête de la note -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <!-- Nom d'utilisateur avec lien vers le profil -->
+                        <h5 class="mb-0">
+                            <a href="{{ url_for('user_profile', user_id=rating.user.id) }}" class="text-white text-decoration-none">
+                                {{ rating.user.username }}
+                            </a>
+                        </h5>
+                        <!-- Score -->
+                        <span class="rating-stars">
+                            <i class="bi bi-star-fill"></i> {{ rating.score }}/10
+                        </span>
+                    </div>
+                    
+                    <!-- Critique écrite -->
+                    {% if rating.review %}
+                    <p class="mt-2 mb-3">{{ rating.review }}</p>
+                    {% else %}
+                    <p class="mt-2 mb-3 text-muted fst-italic">Aucune critique écrite</p>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <!-- Date de création -->
+                        <small class="text-muted">{{ rating.created_at }}</small>
+                        
+                        <!-- Bouton Réponses avec badge du nombre de réponses -->
+                        <a href="{{ url_for('rating_replies', rating_id=rating.id) }}" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-chat-dots"></i> 
+                            Réponses
+                            {% if rating.replies_count > 0 %}
+                                <span class="badge bg-primary">{{ rating.replies_count }}</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Bouton de suppression (uniquement pour l'auteur) -->
+                {% if session.user_id and session.user_id == rating.user_id %}
+                <div class="ms-3">
+                    <form method="POST" action="{{ url_for('delete_rating', album_id=album.id, rating_id=rating.id) }}" style="display: inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette note ?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ================================================
+     STYLE POUR LE BOUTON SPOTIFY
+     ================================================ -->
+<style>
+    .btn-spotify {
+        background-color: transparent;
+        border: 2px solid #1DB954;
+        color: #ffffff !important;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-spotify:hover {
+        background-color: #1DB954;
+        border-color: #1DB954;
+        color: #fff !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(29, 185, 84, 0.4);
+    }
+    
+    .btn-spotify i {
+        font-size: 1.2rem;
+        color: #ffffff !important;
+    }
+    
+    .btn-spotify:hover i {
+        color: #fff !important;
+    }
+</style>
+
+{% endblock %}

@@ -1,0 +1,140 @@
+<!-- ================================================
+     SEARCH.HTML - PAGE DE RECHERCHE
+     ================================================ -->
+
+{% extends "base.html" %}
+{% block title %}Recherche{% endblock %}
+{% block content %}
+
+<head>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+	
+<!-- Titre de la page -->
+<h2 class="mb-4">
+    <i class="bi bi-search"></i> Rechercher
+</h2>
+
+<!-- Formulaire de recherche -->
+<form method="GET" class="mb-4">
+    <div class="input-group input-group-lg">
+        <!-- Champ de saisie avec la valeur de recherche actuelle -->
+        <input type="text" class="form-control search-box" name="q" value="{{ query }}" placeholder="Rechercher un album ou un artiste..." required>
+        <!-- Bouton de soumission -->
+        <button class="btn btn-primary" type="submit">
+            <i class="bi bi-search"></i> Rechercher
+        </button>
+    </div>
+</form>
+
+<!-- Affichage des résultats si une recherche a été effectuée -->
+{% if query %}
+    
+    <!-- ================================================
+         RÉSULTATS : ALBUMS LOCAUX (déjà dans la base)
+         ================================================ -->
+    {% if results.albums %}
+    <h3 class="mb-3">Albums dans la base de données</h3>
+    <div class="row row-cols-1 row-cols-md-3 g-3 mb-5">
+        {% for album in results.albums %}
+        <div class="col">
+            <div class="card">
+                <a href="{{ url_for('album_detail', album_id=album.id) }}" class="text-decoration-none">
+                    <!-- Image de l'album ou placeholder -->
+                    {% if album.image_url %}
+                    <img src="{{ album.image_url }}" class="card-img-top album-cover" alt="{{ album.title }}">
+                    {% else %}
+                    <div class="album-cover bg-secondary d-flex align-items-center justify-content-center">
+                        <i class="bi bi-disc" style="font-size: 4rem;"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Informations de l'album -->
+                    <div class="card-body">
+                        <h5 class="card-title text-white">{{ album.title }}</h5>
+                        <p class="card-text text-muted">{{ album.artist_id }}</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ================================================
+         RÉSULTATS : ALBUMS SPOTIFY
+         ================================================ -->
+    {% if results.spotify_albums %}
+    <h3 class="mb-3">Résultats Spotify - Albums</h3>
+    <div class="row row-cols-1 row-cols-md-3 g-3 mb-5">
+        {% for album in results.spotify_albums %}
+        <div class="col">
+            <div class="card">
+                <!-- Image de l'album -->
+                {% if album.image_url %}
+                <img src="{{ album.image_url }}" class="card-img-top album-cover" alt="{{ album.name }}">
+                {% endif %}
+                
+                <!-- Informations de l'album -->
+                <div class="card-body">
+                    <h5 class="card-title text-white">{{ album.name }}</h5>
+                    <p class="card-text text-muted">{{ album.artist }}</p>
+                    <p class="card-text"><small class="text-muted">{{ album.release_date }}</small></p>
+                    
+                    <!-- Bouton pour ajouter l'album (si connecté) -->
+                    {% if session.user_id %}
+                    <a href="{{ url_for('add_album_from_spotify', spotify_id=album.id) }}" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-plus-circle"></i> Ajouter
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ================================================
+         RÉSULTATS : ARTISTES SPOTIFY
+         ================================================ -->
+    {% if results.spotify_artists %}
+    <h3 class="mb-3">Résultats Spotify - Artistes</h3>
+    <div class="row row-cols-1 row-cols-md-4 g-3">
+        {% for artist in results.spotify_artists %}
+        <div class="col">
+            <div class="card text-center">
+                <!-- Image de l'artiste (circulaire) -->
+                {% if artist.image_url %}
+                <img src="{{ artist.image_url }}" class="card-img-top rounded-circle mx-auto mt-3" style="width: 150px; height: 150px; object-fit: cover;" alt="{{ artist.name }}">
+                {% endif %}
+                
+                <!-- Informations de l'artiste -->
+                <div class="card-body">
+                    <h5 class="card-title text-white">{{ artist.name }}</h5>
+                    
+                    <!-- Genres musicaux (max 2) -->
+                    {% if artist.genres %}
+                    <p class="card-text"><small class="text-muted">{{ artist.genres[:2]|join(', ') }}</small></p>
+                    {% endif %}
+                    
+                    <!-- Bouton pour ajouter l'artiste (si connecté) -->
+                    {% if session.user_id %}
+                    <a href="{{ url_for('add_artist_from_spotify', spotify_id=artist.id) }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> Ajouter
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Message si aucun résultat -->
+    {% if not results.albums and not results.spotify_albums and not results.spotify_artists %}
+    <div class="alert alert-info text-center">
+        <i class="bi bi-info-circle"></i> Aucun résultat trouvé pour "{{ query }}"
+    </div>
+    {% endif %}
+{% endif %}
+{% endblock %}
